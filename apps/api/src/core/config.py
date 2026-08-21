@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     COOKIE_DOMAIN: str | None = None
 
     # Storage & Uploads (Phase 3)
-    STORAGE_LOCAL_DIR: str = os.getenv("STORAGE_LOCAL_DIR", "/app/storage")
+    STORAGE_LOCAL_DIR: str = os.getenv("STORAGE_LOCAL_DIR", "./storage_data")
     MAX_UPLOAD_SIZE_MB: int = 20
     ALLOWED_EXTENSIONS: list[str] = [".pdf", ".md", ".markdown"]
 
