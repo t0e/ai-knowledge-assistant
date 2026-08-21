@@ -6,11 +6,13 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
-# Append root to path for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+# Append repository root to path for apps.api.* imports
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
 
-from apps.api.src.core.config import settings
-from apps.api.src.models.base import Base
+from apps.api.src.core.config import settings  # noqa: E402
+from apps.api.src.models.base import Base  # noqa: E402
 
 # this is the Alembic Config object
 config = context.config

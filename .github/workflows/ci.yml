@@ -77,9 +77,7 @@ jobs:
 
       - name: Run Alembic Database Migrations
         run: |
-          cd apps/api
-          alembic upgrade head
-          cd ../..
+          alembic -c apps/api/alembic.ini upgrade head
 
       - name: Run Pytest Test Suite
         run: |
