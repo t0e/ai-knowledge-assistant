@@ -6,11 +6,12 @@ from apps.api.src.models.user import User
 from apps.api.src.schemas.auth import MessageResponse
 from apps.api.src.schemas.document import (
     DocumentChunkResponse,
+    DocumentCreateUrlRequest,
     DocumentListResponse,
     DocumentResponse,
 )
 from apps.api.src.services.document_service import DocumentService
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("ai_knowledge_assistant.api.documents")
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/documents", tags=["Document Management"])
     response_model=DocumentResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Upload and Process Knowledge Document",
-    description="Uploads, stores, extracts text, and chunks a PDF or Markdown document into PostgreSQL.",
+    description="Uploads, stores, and asynchronously chunks a PDF or Markdown document into PostgreSQL.",
 )
 async def upload_document(
     file: UploadFile = File(
@@ -39,6 +40,46 @@ async def upload_document(
         user_id=current_user.id,
         content=content,
         original_filename=original_filename,
+    )
+    return DocumentResponse.model_validate(document)
+
+
+@router.post(
+    "/url",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ingest Webpage from URL",
+    description="Validates a remote webpage URL against SSRF constraints, creates a knowledge source record, and enqueues background processing.",
+)
+async def ingest_url(
+    payload: DocumentCreateUrlRequest = Body(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DocumentResponse:
+    document = await DocumentService.create_website_document(
+        db=db,
+        user_id=current_user.id,
+        url=payload.url,
+    )
+    return DocumentResponse.model_validate(document)
+
+
+@router.post(
+    "/{document_id}/reprocess",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Reprocess Knowledge Document or Website",
+    description="Re-enqueues an existing document or website source for background text extraction, chunking, and embedding.",
+)
+async def reprocess_document(
+    document_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DocumentResponse:
+    document = await DocumentService.reprocess_document(
+        db=db,
+        user_id=current_user.id,
+        document_id=document_id,
     )
     return DocumentResponse.model_validate(document)
 

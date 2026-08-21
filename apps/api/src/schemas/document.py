@@ -18,8 +18,20 @@ class DocumentChunkResponse(BaseModel):
     created_at: datetime
 
 
+class DocumentCreateUrlRequest(BaseModel):
+    """Payload for submitting a remote webpage URL to be ingested as knowledge."""
+
+    url: str = Field(
+        ...,
+        min_length=4,
+        max_length=2048,
+        examples=["https://example.com/documentation"],
+        description="Public HTTP or HTTPS webpage URL to fetch and ingest.",
+    )
+
+
 class DocumentResponse(BaseModel):
-    """Metadata response representing an uploaded document."""
+    """Metadata response representing an uploaded document or website source."""
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
@@ -28,6 +40,7 @@ class DocumentResponse(BaseModel):
     original_filename: str = Field(..., examples=["architecture.pdf"])
     file_type: str = Field(..., examples=["pdf"])
     file_size: int = Field(..., examples=[1048576])
+    source_url: str | None = Field(default=None, examples=["https://example.com/docs"])
     status: str = Field(..., examples=["ready"])
     error_message: str | None = None
     created_at: datetime

@@ -38,9 +38,13 @@ class Document(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         Integer,
         nullable=False,
     )
-    storage_path: Mapped[str] = mapped_column(
+    storage_path: Mapped[str | None] = mapped_column(
         String(512),
-        nullable=False,
+        nullable=True,
+    )
+    source_url: Mapped[str | None] = mapped_column(
+        String(2048),
+        nullable=True,
     )
     status: Mapped[str] = mapped_column(
         String(50),

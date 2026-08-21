@@ -3,6 +3,7 @@ import logging
 from apps.api.src.core.exceptions import ValidationException
 from apps.api.src.processing.chunker import ChunkResult, RecursiveTextChunker
 from apps.api.src.processing.extractors.base import BaseTextExtractor
+from apps.api.src.processing.extractors.html import HtmlTextExtractor
 from apps.api.src.processing.extractors.markdown import MarkdownTextExtractor
 from apps.api.src.processing.extractors.pdf import PdfTextExtractor
 
@@ -20,6 +21,9 @@ class DocumentProcessor:
         self._extractors: dict[str, BaseTextExtractor] = {
             "pdf": PdfTextExtractor(),
             "markdown": MarkdownTextExtractor(),
+            "website": HtmlTextExtractor(),
+            "html": HtmlTextExtractor(),
+            "htm": HtmlTextExtractor(),
         }
 
     def get_extractor(self, file_type: str) -> BaseTextExtractor:

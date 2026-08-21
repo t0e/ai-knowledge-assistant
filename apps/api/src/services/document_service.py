@@ -7,10 +7,11 @@ from apps.api.src.core.config import settings
 from apps.api.src.core.exceptions import NotFoundException, ValidationException
 from apps.api.src.models.document import Document
 from apps.api.src.models.document_chunk import DocumentChunk
+from apps.api.src.queue.service import QueueService, get_queue_service
 from apps.api.src.services.document_processing_service import (
-    DocumentProcessingService,
     get_document_processing_service,
 )
+from apps.api.src.services.ssrf_service import SSRFService
 from apps.api.src.services.storage_service import BaseStorageService, get_storage_service
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,11 +77,12 @@ class DocumentService:
         content: bytes,
         original_filename: str,
         storage_service: BaseStorageService | None = None,
-        processing_service: DocumentProcessingService | None = None,
+        queue_service: QueueService | None = None,
+        sync_process: bool = False,
     ) -> Document:
-        """Validate, store, record, and process a new uploaded document."""
+        """Validate, store, record, and enqueue a new uploaded document for async background processing."""
         storage = storage_service or get_storage_service()
-        processor = processing_service or get_document_processing_service()
+        queue = queue_service or get_queue_service()
 
         safe_name, file_type = DocumentService._validate_and_classify_file(
             content, original_filename
@@ -109,7 +111,7 @@ class DocumentService:
             await db.commit()
             await db.refresh(document)
             logger.info(
-                f"Successfully uploaded and persisted document id={doc_id} for user_id={user_id}"
+                f"Successfully uploaded and persisted document id={doc_id} for user_id={user_id} with status=uploaded"
             )
         except Exception as e:
             logger.error(
@@ -118,9 +120,113 @@ class DocumentService:
             await storage.delete_file(relative_path)
             raise
 
-        # 3. Synchronously process document into text chunks
-        processed_document = await processor.process_document(db, document.id)
-        return processed_document
+        # 3. Synchronous mode override (for specialized unit tests) or Async Background Enqueue
+        if sync_process:
+            processor = get_document_processing_service()
+            return await processor.process_document(db, document.id)
+
+        # 4. Enqueue background processing job via Redis ARQ
+        enqueued = await queue.enqueue_document_processing(document.id)
+        if not enqueued:
+            logger.warning(
+                f"Background job enqueueing failed for document id={doc_id}; document remains in uploaded status."
+            )
+
+        return document
+
+    @staticmethod
+    async def create_website_document(
+        db: AsyncSession,
+        user_id: uuid.UUID,
+        url: str,
+        queue_service: QueueService | None = None,
+        sync_process: bool = False,
+    ) -> Document:
+        """Validate URL against SSRF rules, create document record, and enqueue for background fetching."""
+        queue = queue_service or get_queue_service()
+
+        # 1. SSRF & Scheme Validation
+        clean_url = SSRFService.validate_url(url)
+
+        # 2. Check if this exact URL is already registered for this user (Reprocessing/Duplicate Handling)
+        stmt = select(Document).where(
+            Document.user_id == user_id,
+            Document.source_url == clean_url,
+        )
+        result = await db.execute(stmt)
+        existing_doc = result.scalar_one_or_none()
+
+        if existing_doc:
+            logger.info(
+                f"URL '{clean_url}' already exists for user_id={user_id} (doc_id={existing_doc.id}); triggering reprocessing."
+            )
+            existing_doc.status = "uploaded"
+            existing_doc.error_message = None
+            await db.commit()
+            await db.refresh(existing_doc)
+
+            if sync_process:
+                processor = get_document_processing_service()
+                return await processor.process_document(db, existing_doc.id)
+
+            await queue.enqueue_document_processing(existing_doc.id)
+            return existing_doc
+
+        # 3. Create new Website Document record
+        doc_id = uuid.uuid4()
+        document = Document(
+            id=doc_id,
+            user_id=user_id,
+            name=clean_url,
+            original_filename=clean_url,
+            source_url=clean_url,
+            file_type="website",
+            file_size=0,
+            storage_path=None,
+            status="uploaded",
+        )
+        db.add(document)
+        await db.commit()
+        await db.refresh(document)
+        logger.info(f"Created website document id={doc_id} for user_id={user_id} (url={clean_url})")
+
+        # 4. Synchronous mode override or Async Enqueue
+        if sync_process:
+            processor = get_document_processing_service()
+            return await processor.process_document(db, document.id)
+
+        enqueued = await queue.enqueue_document_processing(document.id)
+        if not enqueued:
+            logger.warning(
+                f"Background job enqueueing failed for website doc_id={doc_id}; remains in uploaded status."
+            )
+
+        return document
+
+    @staticmethod
+    async def reprocess_document(
+        db: AsyncSession,
+        user_id: uuid.UUID,
+        document_id: uuid.UUID,
+        queue_service: QueueService | None = None,
+        sync_process: bool = False,
+    ) -> Document:
+        """Trigger reprocessing for an existing document or website source."""
+        queue = queue_service or get_queue_service()
+        doc = await DocumentService.get_document(db, user_id, document_id)
+
+        doc.status = "uploaded"
+        doc.error_message = None
+        await db.commit()
+        await db.refresh(doc)
+        logger.info(f"Queued document id={doc.id} for reprocessing.")
+
+        if sync_process:
+            processor = get_document_processing_service()
+            return await processor.process_document(db, doc.id)
+
+        await queue.enqueue_document_processing(doc.id)
+        return doc
 
     @staticmethod
     async def get_document(
@@ -197,8 +303,12 @@ class DocumentService:
         storage = storage_service or get_storage_service()
         doc = await DocumentService.get_document(db, user_id, document_id)
 
-        # Delete physical file
-        await storage.delete_file(doc.storage_path)
+        # Delete physical file if one exists
+        if doc.storage_path:
+            try:
+                await storage.delete_file(doc.storage_path)
+            except Exception as e:
+                logger.warning(f"Could not delete physical storage file {doc.storage_path}: {e}")
 
         # Delete DB row (cascades to document_chunks)
         await db.delete(doc)

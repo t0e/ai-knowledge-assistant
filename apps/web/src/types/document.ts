@@ -4,7 +4,9 @@ export interface DocumentItem {
   original_filename: string;
   file_type: string;
   file_size: number;
+  source_url?: string | null;
   status: string;
+  error_message?: string | null;
   created_at: string;
   updated_at: string;
 }
