@@ -1,15 +1,14 @@
-import io
 import uuid
-import pypdf
-import pytest
-from httpx import AsyncClient
 
+import pytest
 from apps.api.src.core.exceptions import ValidationException
 from apps.api.src.processing.chunker import RecursiveTextChunker
 from apps.api.src.processing.extractors.base import ExtractedSection
 from apps.api.src.processing.extractors.markdown import MarkdownTextExtractor
 from apps.api.src.processing.extractors.pdf import PdfTextExtractor
 from apps.api.src.processing.normalizer import TextNormalizer
+from apps.api.src.queue.worker import process_document_job
+from httpx import AsyncClient
 
 
 def create_test_pdf_bytes(pages_text: list[str]) -> bytes:
@@ -70,6 +69,7 @@ def create_test_pdf_bytes(pages_text: list[str]) -> bytes:
 # 1. Text Normalizer Tests
 # ==============================================================================
 
+
 def test_normalizer_excessive_whitespace_and_newlines():
     raw = "Line 1   with   spaces\n\n\n\n\nLine 2\r\n\r\nLine 3"
     cleaned = TextNormalizer.normalize(raw)
@@ -77,7 +77,7 @@ def test_normalizer_excessive_whitespace_and_newlines():
 
 
 def test_normalizer_control_characters():
-    raw = "Valid text\x00\x07with\x1Fcontrol\x7Fchars"
+    raw = "Valid text\x00\x07with\x1fcontrol\x7fchars"
     cleaned = TextNormalizer.normalize(raw)
     assert cleaned == "Valid textwithcontrolchars"
 
@@ -92,19 +92,20 @@ def test_normalizer_unicode_preservation():
 # 2. Markdown Extractor Tests
 # ==============================================================================
 
+
 def test_markdown_extractor_headings_and_structure():
     md = (
-        "# System Architecture\n\n"
-        "This is the top-level overview.\n\n"
-        "## Authentication Module\n\n"
-        "We use HttpOnly cookies with JWT.\n\n"
-        "```python\n"
-        "# Code block with hashtag should not be heading\n"
-        "def login(): pass\n"
-        "```\n\n"
-        "## Storage Module\n\n"
-        "- Item 1\n- Item 2\n"
-    ).encode("utf-8")
+        b"# System Architecture\n\n"
+        b"This is the top-level overview.\n\n"
+        b"## Authentication Module\n\n"
+        b"We use HttpOnly cookies with JWT.\n\n"
+        b"```python\n"
+        b"# Code block with hashtag should not be heading\n"
+        b"def login(): pass\n"
+        b"```\n\n"
+        b"## Storage Module\n\n"
+        b"- Item 1\n- Item 2\n"
+    )
 
     extractor = MarkdownTextExtractor()
     sections = extractor.extract(md, "test.md")
@@ -129,6 +130,7 @@ def test_markdown_extractor_empty_fails():
 # ==============================================================================
 # 3. PDF Extractor Tests
 # ==============================================================================
+
 
 def test_pdf_extractor_single_and_multi_page():
     pdf_bytes = create_test_pdf_bytes(
@@ -158,6 +160,7 @@ def test_pdf_extractor_corrupt_fails():
 # ==============================================================================
 # 4. Recursive Chunker Tests
 # ==============================================================================
+
 
 def test_chunker_deterministic_and_ordering():
     chunker = RecursiveTextChunker(chunk_size=50, chunk_overlap=10)
@@ -191,10 +194,6 @@ def test_chunker_long_document_overlap():
     assert chunks[1].chunk_index == 1
 
 
-# ==============================================================================
-# 5. Integration End-to-End Test: Upload -> Chunking -> DB -> Cascade Delete
-# ==============================================================================
-
 @pytest.mark.asyncio
 async def test_upload_pdf_processes_and_persists_chunks(async_client: AsyncClient):
     """Verify upload automatically processes PDF into document_chunks and transitions to ready."""
@@ -213,9 +212,11 @@ async def test_upload_pdf_processes_and_persists_chunks(async_client: AsyncClien
     assert upload_res.status_code == 201
     doc_data = upload_res.json()
     doc_id = doc_data["id"]
-
-    assert doc_data["status"] == "ready"
+    assert doc_data["status"] in ("uploaded", "ready")
     assert doc_data["name"] == "rag_paper.pdf"
+
+    # Execute worker processing
+    await process_document_job({"job_id": "test"}, doc_id)
 
     # Query chunks endpoint
     chunks_res = await async_client.get(f"/api/v1/documents/{doc_id}/chunks")
@@ -249,9 +250,9 @@ async def test_upload_markdown_processes_and_persists_chunks(async_client: Async
     )
 
     md_content = (
-        "# FastAPI Guide\n\nFastAPI is modern and async.\n\n"
-        "## Dependency Injection\n\nUse Depends for modular auth and database sessions."
-    ).encode("utf-8")
+        b"# FastAPI Guide\n\nFastAPI is modern and async.\n\n"
+        b"## Dependency Injection\n\nUse Depends for modular auth and database sessions."
+    )
 
     upload_res = await async_client.post(
         "/api/v1/documents",
@@ -260,7 +261,10 @@ async def test_upload_markdown_processes_and_persists_chunks(async_client: Async
     assert upload_res.status_code == 201
     doc_data = upload_res.json()
     doc_id = doc_data["id"]
-    assert doc_data["status"] == "ready"
+    assert doc_data["status"] in ("uploaded", "ready")
+
+    # Execute worker processing
+    await process_document_job({"job_id": "test"}, doc_id)
 
     # Query chunks endpoint
     chunks_res = await async_client.get(f"/api/v1/documents/{doc_id}/chunks")

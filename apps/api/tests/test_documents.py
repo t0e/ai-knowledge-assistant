@@ -1,10 +1,10 @@
 import uuid
+
 import pytest
 import pytest_asyncio
-from httpx import AsyncClient
-
 from apps.api.src.services.storage_service import LocalStorageService
 from apps.api.tests.test_processing import create_test_pdf_bytes
+from httpx import AsyncClient
 
 
 @pytest_asyncio.fixture
@@ -47,7 +47,7 @@ async def test_upload_pdf_success(async_client: AsyncClient, authenticated_user_
     assert data["original_filename"] == "architecture_diagram.pdf"
     assert data["file_type"] == "pdf"
     assert data["file_size"] == len(pdf_bytes)
-    assert data["status"] == "ready"
+    assert data["status"] in ("uploaded", "ready")
     assert "id" in data
 
 
@@ -64,7 +64,7 @@ async def test_upload_markdown_success(async_client: AsyncClient, authenticated_
     assert data["name"] == "guide.md"
     assert data["file_type"] == "markdown"
     assert data["file_size"] == len(md_bytes)
-    assert data["status"] == "ready"
+    assert data["status"] in ("uploaded", "ready")
 
 
 @pytest.mark.asyncio

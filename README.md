@@ -148,9 +148,62 @@ npm run dev
 
 ---
 
+---
+
+## 📊 RAG Evaluation & Observability (Phase 9)
+
+The platform includes a dedicated, lightweight evaluation and observability framework to benchmark and measure RAG performance deterministically.
+
+### 🎯 Evaluation Metric Dimensions
+```text
+Evaluation Dataset (25 cases across 7 categories)
+       ↓
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Retrieval Metrics                                        │
+│    • Hit@1, Hit@3, Hit@5 (% expected chunk in top-K)        │
+│    • MRR (Mean Reciprocal Rank)                             │
+│    • Retrieval Latency (ms)                                 │
+├─────────────────────────────────────────────────────────────┤
+│ 2. Generation & Groundedness Metrics                        │
+│    • Answer Correctness (% deterministic key fact match)    │
+│    • Groundedness Rubric (0: Hallucinated → 4: Fully Valid) │
+│    • Unanswerable Refusal Rate (% correctly refused)        │
+├─────────────────────────────────────────────────────────────┤
+│ 3. Citation Quality & Anti-Hallucination                    │
+│    • Citation Validity (% matching retrieved chunks)        │
+│    • Hallucinated Citation Count (Strict target = 0)        │
+├─────────────────────────────────────────────────────────────┤
+│ 4. Operational Latency & Token Usage                        │
+│    • Time to First Token (TTFT)                             │
+│    • Generation Latency & Total Request Duration            │
+│    • Prompt & Completion Tokens, Cost Estimation (USD)      │
+└─────────────────────────────────────────────────────────────┘
+       ↓
+Machine-Readable Artifacts (`evaluation/results/eval_*.json`) + CLI Summary
+```
+
+### ⚡ Running Evaluation
+
+#### 1. Retrieval-Only Mode (Fast & Offline — No paid LLM calls)
+```bash
+docker compose exec backend python3 -m apps.api.src.evaluation.cli --mode retrieval --top-k 5
+```
+
+#### 2. Full End-to-End RAG Evaluation (Generation, Groundedness, Citations, Latency)
+```bash
+docker compose exec backend python3 -m apps.api.src.evaluation.cli --mode full --top-k 5
+```
+
+---
+
 ## 🗺️ Implementation Roadmap
 - [x] **Phase 1: Foundation** (Monorepo, Docker Compose, FastAPI, Next.js, Postgres+pgvector, Redis)
-- [ ] **Phase 2: Ingestion & Workers** (PDF/Markdown/URL parsers, recursive chunking, OpenAI embeddings, Celery queue)
-- [ ] **Phase 3: RAG Engine & Streaming Chat** (HNSW vector retrieval, prompt grounding, citations, SSE streaming)
-- [ ] **Phase 4: Frontend UI/UX** (Drag-and-drop upload manager, streaming chat interface, citation popovers)
-- [ ] **Phase 5: Production Readiness** (End-to-end tests, rate limiting, security audits, benchmarking)
+- [x] **Phase 2: Authentication & Multi-Tenancy** (JWT Cookies, Argon2/Bcrypt hashing, User isolation)
+- [x] **Phase 3: Document Management & Storage** (PDF/Markdown uploads, metadata storage, deduplication)
+- [x] **Phase 4: Document Processing & Chunking** (PDF text extraction, Recursive chunker, token windowing)
+- [x] **Phase 5: Embeddings & Vector Search** (OpenAI embeddings, pgvector cosine distance similarity)
+- [x] **Phase 6: Conversational RAG & Streaming** (SSE streaming, grounded context builder, citations, multi-turn history)
+- [x] **Phase 7: Redis Background Processing** (ARQ workers, async polling, retry backoff, queue monitoring)
+- [x] **Phase 8: Website / URL Ingestion** (SSRF defense in depth, DNS validation, HTML extraction, noise filtering)
+- [x] **Phase 9: RAG Evaluation & Observability** (Hit@K, MRR, Groundedness, TTFT latency, request correlation IDs)
+

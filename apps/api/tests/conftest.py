@@ -40,6 +40,16 @@ async def db_session_override():
     await test_engine.dispose()
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def mock_queue_service():
+    """Mock background queue enqueueing during tests to prevent external worker race conditions."""
+    with patch("apps.api.src.services.document_service.get_queue_service") as mock_get_queue:
+        mock_q = AsyncMock()
+        mock_q.enqueue_document_processing = AsyncMock(return_value=True)
+        mock_get_queue.return_value = mock_q
+        yield mock_q
+
+
 @pytest.fixture
 def mock_health_healthy():
     with (

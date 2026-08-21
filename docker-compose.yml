@@ -55,6 +55,10 @@ services:
       - STORAGE_LOCAL_DIR=/app/storage
       - MAX_UPLOAD_SIZE_MB=20
       - BACKEND_CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000"]
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-openai}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
     ports:
       - "8000:8000"
     volumes:
@@ -71,6 +75,39 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - ai_network
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: ai_knowledge_worker
+    restart: unless-stopped
+    command: python -m apps.api.src.queue.worker
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME:-AI Knowledge Assistant}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DEBUG=${DEBUG:-True}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-knowledge_db}
+      - SYNC_DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-knowledge_db}
+      - REDIS_URL=redis://redis:6379/0
+      - STORAGE_LOCAL_DIR=/app/storage
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-openai}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - PROCESSING_QUEUE=ai_knowledge_document_processing
+      - JOB_TIMEOUT=300
+      - JOB_MAX_RETRIES=3
+    volumes:
+      - ./apps/api:/app/apps/api
+      - storage_data:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - ai_network
 

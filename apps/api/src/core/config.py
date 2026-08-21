@@ -30,6 +30,24 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP: int = 100
     TOKENIZER_MODEL: str = "cl100k_base"
 
+    # Embeddings & Vector Search (Phase 5)
+    EMBEDDING_PROVIDER: str = "openai"  # "openai" or "mock"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_DIMENSIONS: int = 1536
+    EMBEDDING_BATCH_SIZE: int = 100
+    DEFAULT_TOP_K: int = 5
+    MAX_TOP_K: int = 20
+    OPENAI_API_KEY: str = ""
+
+    # LLM & RAG Orchestration (Phase 6)
+    LLM_PROVIDER: str = "openai"  # "openai" or "mock"
+    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_TEMPERATURE: float = 0.1
+    LLM_MAX_TOKENS: int = 1500
+    RAG_SIMILARITY_THRESHOLD: float = 0.20
+    RAG_MAX_CONTEXT_CHUNKS: int = 5
+    RAG_MAX_HISTORY_MESSAGES: int = 6
+
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
@@ -65,11 +83,20 @@ class Settings(BaseSettings):
             return v.replace("postgresql://", "postgresql+psycopg2://", 1)
         return v
 
-    # Redis
+    # Redis & Background Queue (Phase 7)
     REDIS_URL: str = "redis://localhost:6379/0"
+    PROCESSING_QUEUE: str = "ai_knowledge_document_processing"
+    JOB_TIMEOUT: int = 300  # 5 minutes
+    JOB_MAX_RETRIES: int = 3
+    JOB_RETRY_DELAY: int = 5  # seconds
 
-    # AI / LLM (Phase 5)
-    OPENAI_API_KEY: str = ""
+    # Web Ingestion & SSRF Protection (Phase 8)
+    MAX_WEB_CONTENT_SIZE_MB: int = 10
+    WEB_FETCH_TIMEOUT_SECONDS: int = 15
+    WEB_FETCH_MAX_REDIRECTS: int = 5
+    WEB_FETCH_USER_AGENT: str = (
+        "Mozilla/5.0 (compatible; AIKnowledgeAssistantBot/1.0; +https://github.com)"
+    )
 
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env", "../../.env"),
