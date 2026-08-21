@@ -71,6 +71,9 @@ async def request_correlation_and_timing_middleware(request: Request, call_next)
         process_time_ms = (time.perf_counter() - start_time) * 1000
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Process-Time"] = f"{process_time_ms:.2f}ms"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
         # Privacy-safe structured access log
         if not request.url.path.endswith("/health"):
