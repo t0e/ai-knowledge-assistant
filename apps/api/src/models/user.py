@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
+    from apps.api.src.models.conversation import Conversation
     from apps.api.src.models.document import Document
 
 
@@ -31,6 +32,13 @@ class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     documents: Mapped[list["Document"]] = relationship(
         "Document",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    conversations: Mapped[list["Conversation"]] = relationship(
+        "Conversation",
         back_populates="user",
         cascade="all, delete-orphan",
         passive_deletes=True,
