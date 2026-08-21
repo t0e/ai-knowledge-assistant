@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from apps.api.src.models.base import Base, UUIDPrimaryKeyMixin
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import ForeignKey, Integer, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class DocumentChunk(Base, UUIDPrimaryKeyMixin):
-    """Chunk of a document containing text content and citation metadata."""
+    """Chunk of a document containing text content, vector embedding, and citation metadata."""
 
     __tablename__ = "document_chunks"
 
@@ -36,6 +37,10 @@ class DocumentChunk(Base, UUIDPrimaryKeyMixin):
         JSONB().with_variant(JSON, "sqlite"),
         default=dict,
         nullable=False,
+    )
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(1536),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         server_default=func.now(),
