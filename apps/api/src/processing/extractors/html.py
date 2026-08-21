@@ -80,9 +80,10 @@ class HtmlTextExtractor(BaseTextExtractor):
 
         # 4. Remove common noisy divs / sections (cookie banners, sidebars, ads)
         for element in soup.find_all(True):
-            if not isinstance(element, Tag):
+            if not isinstance(element, Tag) or element.attrs is None:
                 continue
-            raw_class = element.get("class")
+
+            raw_class = element.attrs.get("class")
             if isinstance(raw_class, list):
                 element_classes = " ".join(str(c) for c in raw_class if c)
             elif raw_class:
@@ -90,7 +91,7 @@ class HtmlTextExtractor(BaseTextExtractor):
             else:
                 element_classes = ""
 
-            raw_id = element.get("id")
+            raw_id = element.attrs.get("id")
             element_id = str(raw_id) if raw_id else ""
 
             if NOISE_CLASSES_AND_IDS.search(element_classes) or NOISE_CLASSES_AND_IDS.search(
