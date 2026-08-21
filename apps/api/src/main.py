@@ -1,5 +1,6 @@
 import logging
 import time
+import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -58,14 +59,33 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 
-# Request timing and metadata middleware
+# Request ID & Timing Correlation Middleware
 @app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    response.headers["X-Process-Time"] = f"{process_time:.4f}s"
-    return response
+async def request_correlation_and_timing_middleware(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
+    request.state.request_id = request_id
+
+    start_time = time.perf_counter()
+    try:
+        response = await call_next(request)
+        process_time_ms = (time.perf_counter() - start_time) * 1000
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Process-Time"] = f"{process_time_ms:.2f}ms"
+
+        # Privacy-safe structured access log
+        if not request.url.path.endswith("/health"):
+            logger.info(
+                f"HTTP {request.method} {request.url.path} -> {response.status_code} "
+                f"({process_time_ms:.2f}ms) [request_id={request_id}]"
+            )
+        return response
+    except Exception as exc:
+        process_time_ms = (time.perf_counter() - start_time) * 1000
+        logger.error(
+            f"HTTP {request.method} {request.url.path} FAILED: {exc} "
+            f"({process_time_ms:.2f}ms) [request_id={request_id}]"
+        )
+        raise exc
 
 
 # Include API v1 Router

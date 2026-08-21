@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Acme Corp Cloud Architecture & API Specification</title>
+</head>
+<body>
+    <main>
+        <h1>Cloud Architecture and Service Architecture</h1>
+        <p>The AI Knowledge Assistant is engineered with a modular microservices architecture utilizing FastAPI, PostgreSQL, Redis, and Next.js.</p>
+
+        <h2>1. RESTful API Versioning</h2>
+        <p>All core API endpoints are prefixed with <code>/api/v1</code>. The backend uses asynchronous request handlers with lifespan management for connection pooling.</p>
+
+        <h2>2. Asynchronous Job Processing with Redis ARQ</h2>
+        <p>Heavy I/O and CPU workloads including document extraction, chunking, and embedding generation are executed asynchronously using Redis-backed ARQ workers. Worker tasks use exponential backoff retries on transient network errors.</p>
+
+        <h2>3. Vector Storage and pgvector Indexing</h2>
+        <p>Document chunks are transformed into 1536-dimensional vector embeddings and stored in PostgreSQL using the pgvector extension. Semantic vector similarity search is performed using cosine distance operators.</p>
+
+        <h2>4. SSRF Defense in Depth</h2>
+        <p>The system protects against Server-Side Request Forgery by inspecting both URL hostnames and resolved DNS IP addresses, blocking loopback, RFC1918 private subnets, cloud metadata endpoints (169.254.169.254), and internal Docker service containers.</p>
+    </main>
+</body>
+</html>

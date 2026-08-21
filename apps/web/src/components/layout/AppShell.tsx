@@ -32,6 +32,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // If unauthenticated on a protected route, hold rendering while AuthContext redirects to /login
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          <span className="text-xs font-mono">Redirecting to sign in...</span>
+        </div>
+      </div>
+    );
+  }
+
   // Authenticated Dashboard Layout
   return (
     <div className="min-h-screen flex antialiased bg-slate-950 text-slate-100">

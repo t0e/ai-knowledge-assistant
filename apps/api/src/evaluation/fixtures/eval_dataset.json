@@ -1,0 +1,284 @@
+[
+  {
+    "id": "direct-leave-001",
+    "category": "direct_factual",
+    "question": "How many days of paid annual leave do full-time employees receive per calendar year?",
+    "expected_answer": "Full-time permanent employees receive 25 days of paid annual leave per calendar year.",
+    "expected_document": "employee_handbook.md",
+    "expected_heading": "Annual Leave and Vacation Policy",
+    "expected_keywords": ["25 days", "annual leave", "full-time"],
+    "answerable": true,
+    "notes": "Direct factual lookup from employee handbook section 1."
+  },
+  {
+    "id": "direct-jwt-002",
+    "category": "direct_factual",
+    "question": "What is the expiration time for access tokens in the authentication system?",
+    "expected_answer": "Access tokens have a strict expiration time of 15 minutes.",
+    "expected_document": "security_guide.md",
+    "expected_heading": "Authentication and Session Management",
+    "expected_keywords": ["15 minutes", "access token", "jwt"],
+    "answerable": true,
+    "notes": "Direct factual lookup from security guide section 1."
+  },
+  {
+    "id": "direct-encryption-003",
+    "category": "direct_factual",
+    "question": "What cryptographic algorithm is required for encrypting data at rest?",
+    "expected_answer": "All sensitive data at rest must be encrypted using AES-256-GCM.",
+    "expected_document": "security_guide.md",
+    "expected_heading": "Cryptographic and Encryption Standards",
+    "expected_keywords": ["aes-256", "data at rest", "encrypted"],
+    "answerable": true,
+    "notes": "Direct factual lookup from security guide section 3."
+  },
+  {
+    "id": "direct-equipment-004",
+    "category": "direct_factual",
+    "question": "How much is the one-time home office setup allowance for new full-time employees?",
+    "expected_answer": "Employees receive a one-time $1,000 home office setup allowance upon completing their 90-day probationary period.",
+    "expected_document": "employee_handbook.md",
+    "expected_heading": "Remote Work and Equipment Allowances",
+    "expected_keywords": ["$1,000", "home office", "90-day"],
+    "answerable": true,
+    "notes": "Direct factual lookup from employee handbook section 2."
+  },
+  {
+    "id": "direct-rate-limit-005",
+    "category": "direct_factual",
+    "question": "What is the global rate limit enforced on public API endpoints for unauthenticated IP addresses?",
+    "expected_answer": "Public API endpoints enforce a global rate limit of 100 requests per minute per IP address.",
+    "expected_document": "security_guide.md",
+    "expected_heading": "Rate Limiting and Denial of Service Mitigation",
+    "expected_keywords": ["100 requests", "per minute", "public api"],
+    "answerable": true,
+    "notes": "Direct factual lookup from security guide section 4."
+  },
+  {
+    "id": "semantic-vacation-006",
+    "category": "semantic_paraphrased",
+    "question": "How much vacation time does a staff member get each year and can they roll it over?",
+    "expected_answer": "Employees get 25 days of vacation time per year and can roll over up to 10 unused days into the next year before March 31st.",
+    "expected_document": "employee_handbook.md",
+    "expected_heading": "Annual Leave and Vacation Policy",
+    "expected_keywords": ["25 days", "10 unused", "roll over", "march 31"],
+    "answerable": true,
+    "notes": "Semantic paraphrasing: 'vacation time' instead of 'annual leave'."
+  },
+  {
+    "id": "semantic-session-007",
+    "category": "semantic_paraphrased",
+    "question": "How long does a user session remain valid before requiring a refresh token?",
+    "expected_answer": "Access tokens expire after 15 minutes, while refresh tokens remain valid for up to 7 days in HttpOnly cookies.",
+    "expected_document": "security_guide.md",
+    "expected_heading": "Authentication and Session Management",
+    "expected_keywords": ["15 minutes", "7 days", "refresh token"],
+    "answerable": true,
+    "notes": "Semantic paraphrasing: 'session remain valid' instead of 'JWT expiration'."
+  },
+  {
+    "id": "semantic-wfh-008",
+    "category": "semantic_paraphrased",
+    "question": "What financial subsidies does Acme Corp provide for working from home and internet connectivity?",
+    "expected_answer": "Acme Corp provides a $1,000 home office setup allowance and a $50 monthly internet stipend.",
+    "expected_document": "employee_handbook.md",
+    "expected_heading": "Remote Work and Equipment Allowances",
+    "expected_keywords": ["$1,000", "$50", "internet", "home office"],
+    "answerable": true,
+    "notes": "Semantic paraphrasing: 'financial subsidies for working from home'."
+  },
+  {
+    "id": "semantic-tls-009",
+    "category": "semantic_paraphrased",
+    "question": "Which network transport security protocol version is mandated for all internal and public network communication?",
+    "expected_answer": "TLS 1.3 is strictly mandated for all data in transit across public and internal networks.",
+    "expected_document": "security_guide.md",
+    "expected_heading": "Cryptographic and Encryption Standards",
+    "expected_keywords": ["tls 1.3", "in transit", "network"],
+    "answerable": true,
+    "notes": "Semantic paraphrasing: 'network transport security protocol'."
+  },
+  {
+    "id": "multi-onboarding-security-010",
+    "category": "multi_source",
+    "question": "What are the requirements for a new full-time employee regarding their home equipment allowance and their password complexity?",
+    "expected_answer": "Employees get a $1,000 home equipment allowance after 90 days, and must create passwords with at least 8 characters including uppercase, lowercase, number, and special character.",
+    "expected_document": "employee_handbook.md",
+    "expected_keywords": ["$1,000", "8 characters", "uppercase", "special character"],
+    "answerable": true,
+    "notes": "Multi-source query across employee_handbook.md and security_guide.md."
+  },
+  {
+    "id": "multi-auth-architecture-011",
+    "category": "multi_source",
+    "question": "How are API endpoints versioned, and what authentication token mechanism is required to access them?",
+    "expected_answer": "API endpoints are prefixed with /api/v1 and require JWT access tokens with a 15-minute expiration.",
+    "expected_document": "api_architecture.html",
+    "expected_keywords": ["/api/v1", "jwt", "15 minutes"],
+    "answerable": true,
+    "notes": "Multi-source query across api_architecture.html and security_guide.md."
+  },
+  {
+    "id": "multi-hr-reporting-012",
+    "category": "multi_source",
+    "question": "When are quarterly performance reviews held, and what is the process for reporting workplace conduct violations?",
+    "expected_answer": "Reviews take place in March, June, September, and December; conduct violations are reported to hr@acmecorp.example or the compliance hotline.",
+    "expected_document": "employee_handbook.md",
+    "expected_keywords": ["quarterly", "march", "december", "hr@acmecorp.example", "hotline"],
+    "answerable": true,
+    "notes": "Multi-source query across sections 3 and 4 of employee_handbook.md."
+  },
+  {
+    "id": "followup-leave-rollover-013",
+    "category": "follow_up",
+    "question": "What is the deadline for using rolled over vacation days before they are forfeited?",
+    "expected_answer": "Rolled over days must be used before March 31st of the subsequent calendar year.",
+    "expected_document": "employee_handbook.md",
+    "expected_heading": "Annual Leave and Vacation Policy",
+    "expected_keywords": ["march 31", "forfeited", "rollover"],
+    "answerable": true,
+    "history": [
+      {"role": "user", "content": "How many days can I roll over to next year?"},
+      {"role": "assistant", "content": "You can roll over up to 10 unused leave days into the next calendar year [1]."}
+    ],
+    "notes": "Follow-up conversation turn referring to earlier leave rollover query."
+  },
+  {
+    "id": "followup-mfa-devices-014",
+    "category": "follow_up",
+    "question": "What specific MFA methods are supported for production system access?",
+    "expected_answer": "Multi-factor authentication is supported via TOTP or WebAuthn hardware keys.",
+    "expected_document": "security_guide.md",
+    "expected_heading": "Password Requirements and Multi-Factor Authentication",
+    "expected_keywords": ["totp", "webauthn", "mfa"],
+    "answerable": true,
+    "history": [
+      {"role": "user", "content": "Is multi-factor authentication required?"},
+      {"role": "assistant", "content": "Yes, MFA is mandatory for all production system access [1]."}
+    ],
+    "notes": "Follow-up conversation turn asking for specific MFA methods."
+  },
+  {
+    "id": "followup-worker-retries-015",
+    "category": "follow_up",
+    "question": "How does the background worker handle transient network errors during processing?",
+    "expected_answer": "Worker tasks utilize exponential backoff retries when transient network errors occur.",
+    "expected_document": "api_architecture.html",
+    "expected_heading": "Asynchronous Job Processing with Redis ARQ",
+    "expected_keywords": ["exponential backoff", "retries", "worker"],
+    "answerable": true,
+    "history": [
+      {"role": "user", "content": "What technology is used for asynchronous jobs?"},
+      {"role": "assistant", "content": "Heavy workloads are processed asynchronously using Redis-backed ARQ workers [1]."}
+    ],
+    "notes": "Follow-up question on worker error recovery mechanisms."
+  },
+  {
+    "id": "unans-fifa-world-cup-016",
+    "category": "unanswerable",
+    "question": "Who won the 2018 FIFA World Cup final match?",
+    "expected_answer": null,
+    "expected_document": null,
+    "expected_keywords": [],
+    "answerable": false,
+    "notes": "Out-of-domain unanswerable question. RAG must clearly refuse without hallucinations."
+  },
+  {
+    "id": "unans-stock-ticker-017",
+    "category": "unanswerable",
+    "question": "What is the Acme Corp stock ticker symbol on NASDAQ and what was its IPO price?",
+    "expected_answer": null,
+    "expected_document": null,
+    "expected_keywords": [],
+    "answerable": false,
+    "notes": "Company financial/stock information not present in handbook. Must refuse."
+  },
+  {
+    "id": "unans-office-cafeteria-018",
+    "category": "unanswerable",
+    "question": "What are the operating hours and daily menu of the headquarter office cafeteria?",
+    "expected_answer": null,
+    "expected_document": null,
+    "expected_keywords": [],
+    "answerable": false,
+    "notes": "Physical cafeteria question for a remote-first company. Must refuse."
+  },
+  {
+    "id": "unans-quantum-computing-019",
+    "category": "unanswerable",
+    "question": "What quantum computing hardware processor does the architecture use for vector search?",
+    "expected_answer": null,
+    "expected_document": null,
+    "expected_keywords": [],
+    "answerable": false,
+    "notes": "Fictitious quantum hardware query. Must refuse."
+  },
+  {
+    "id": "unans-maternity-leave-020",
+    "category": "unanswerable",
+    "question": "How many weeks of paid parental and maternity leave are provided to primary caregivers?",
+    "expected_answer": null,
+    "expected_document": null,
+    "expected_keywords": [],
+    "answerable": false,
+    "notes": "Parental leave details not specified in section 1. Must refuse gracefully."
+  },
+  {
+    "id": "partial-contractor-equipment-021",
+    "category": "partially_answerable",
+    "question": "How much home office stipend do full-time employees and independent contractors receive?",
+    "expected_answer": "Full-time employees receive $1,000 after 90 days, but contractors and temporary workers are explicitly not eligible.",
+    "expected_document": "employee_handbook.md",
+    "expected_heading": "Remote Work and Equipment Allowances",
+    "expected_keywords": ["$1,000", "contractors", "not eligible"],
+    "answerable": true,
+    "notes": "Partially answerable: full-time is funded, contractors are explicitly excluded."
+  },
+  {
+    "id": "partial-part-time-leave-022",
+    "category": "partially_answerable",
+    "question": "How many exact days of annual leave does a part-time employee working 20 hours per week receive?",
+    "expected_answer": "Part-time employees receive prorated leave proportional to their contracted hours, though an exact day count is calculated individually.",
+    "expected_document": "employee_handbook.md",
+    "expected_heading": "Annual Leave and Vacation Policy",
+    "expected_keywords": ["prorated", "proportional", "part-time"],
+    "answerable": true,
+    "notes": "Partially answerable: handbook states prorated, but doesn't give a static day number."
+  },
+  {
+    "id": "website-vector-dim-023",
+    "category": "website",
+    "question": "How many dimensions do vector embeddings have in the pgvector database schema?",
+    "expected_answer": "Document chunks are transformed into 1536-dimensional vector embeddings and indexed with cosine distance in pgvector.",
+    "expected_document": "api_architecture.html",
+    "expected_heading": "Vector Storage and pgvector Indexing",
+    "expected_url": "https://architecture.acmecorp.example/spec",
+    "expected_keywords": ["1536", "pgvector", "cosine"],
+    "answerable": true,
+    "notes": "Website ingestion query grounded in HTML knowledge document."
+  },
+  {
+    "id": "website-ssrf-mitigation-024",
+    "category": "website",
+    "question": "How does the architecture protect against Server-Side Request Forgery attacks during website ingestion?",
+    "expected_answer": "SSRF protection inspects both hostnames and resolved DNS IP addresses, blocking loopback, RFC1918 subnets, cloud metadata (169.254.169.254), and internal Docker containers.",
+    "expected_document": "api_architecture.html",
+    "expected_heading": "SSRF Defense in Depth",
+    "expected_url": "https://architecture.acmecorp.example/spec",
+    "expected_keywords": ["dns", "169.254.169.254", "docker", "rfc1918", "loopback"],
+    "answerable": true,
+    "notes": "Website ingestion query verifying SSRF protection documentation."
+  },
+  {
+    "id": "website-worker-tech-025",
+    "category": "website",
+    "question": "Which technology stack and framework is used for asynchronous background document processing?",
+    "expected_answer": "Asynchronous background document processing uses Redis-backed ARQ workers.",
+    "expected_document": "api_architecture.html",
+    "expected_heading": "Asynchronous Job Processing with Redis ARQ",
+    "expected_url": "https://architecture.acmecorp.example/spec",
+    "expected_keywords": ["redis", "arq", "asynchronous"],
+    "answerable": true,
+    "notes": "Website ingestion query verifying worker stack architecture."
+  }
+]

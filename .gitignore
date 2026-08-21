@@ -52,6 +52,9 @@ wheels/
 .coverage.*
 htmlcov/
 coverage/
+apps/api/evaluation/results/*.json
+evaluation/results/*.json
+
 
 # ==============================================================================
 # Node.js & Frontend Artifacts (Next.js)
