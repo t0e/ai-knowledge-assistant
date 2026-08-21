@@ -112,7 +112,7 @@ class RAGService:
         conversation_id: uuid.UUID,
         query: str,
         document_ids: list[uuid.UUID] | None = None,
-        top_k: int = 5,
+        top_k: int | None = None,
     ) -> AsyncGenerator[str, None]:
         """
         Execute full RAG pipeline and yield Server-Sent Events (SSE):
@@ -125,6 +125,8 @@ class RAGService:
         7. Persist completed assistant message
         8. Stream completion event
         """
+        effective_top_k = top_k if top_k is not None else settings.DEFAULT_TOP_K
+
         # 1. Validate conversation ownership
         t_start = time.perf_counter()
         conversation = await ConversationService.get_conversation(db, user_id, conversation_id)
@@ -143,7 +145,7 @@ class RAGService:
             db=db,
             user_id=user_id,
             query=query,
-            top_k=top_k,
+            top_k=effective_top_k,
             document_ids=document_ids,
         )
         t_retrieval_end = time.perf_counter()

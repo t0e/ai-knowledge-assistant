@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     EMBEDDING_DIMENSIONS: int = 1536
     EMBEDDING_BATCH_SIZE: int = 100
-    DEFAULT_TOP_K: int = 5
+    DEFAULT_TOP_K: int = 10
     MAX_TOP_K: int = 20
     OPENAI_API_KEY: str = ""
 
@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.1
     LLM_MAX_TOKENS: int = 1500
     RAG_SIMILARITY_THRESHOLD: float = 0.20
-    RAG_MAX_CONTEXT_CHUNKS: int = 5
+    RAG_MAX_CONTEXT_CHUNKS: int = 8
     RAG_MAX_HISTORY_MESSAGES: int = 6
 
     # CORS

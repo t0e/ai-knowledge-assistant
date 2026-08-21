@@ -97,6 +97,14 @@ class MockLLMProvider(BaseLLMProvider):
             "shall",
             "give",
             "tell",
+            "version",
+            "guidelines",
+            "policy",
+            "status",
+            "methods",
+            "process",
+            "system",
+            "access",
         }
         q_words = [
             w
@@ -112,15 +120,21 @@ class MockLLMProvider(BaseLLMProvider):
         if q_words and matching_content_words == 0:
             return "I couldn't find enough information in your uploaded documents to answer that question."
 
-        # Grounded response synthesis
+        # Grounded response synthesis: only synthesize sources containing query terms
         summary_sentences = []
 
-        for src_id, doc_name, body in source_matches[:3]:
+        for src_id, doc_name, body in source_matches:
             # Extract content from body
             if "Content:" in body:
                 content_part = body.split("Content:", 1)[-1].strip()
             else:
                 content_part = body.strip()
+
+            # Verify chunk actually contains relevant query terms
+            chunk_lower = content_part.lower()
+            if q_words and not any(w in chunk_lower for w in q_words):
+                continue
+
             cleaned_content = re.sub(r"[\n\r\t]+", " ", content_part).strip()
             # Strip markdown hashes
             cleaned_content = re.sub(r"^#+\s*", "", cleaned_content)
@@ -133,7 +147,7 @@ class MockLLMProvider(BaseLLMProvider):
         if not summary_sentences:
             return "I couldn't find enough information in your uploaded documents to answer that question."
 
-        return " ".join(summary_sentences)
+        return " ".join(summary_sentences[:3])
 
     async def generate(
         self,
