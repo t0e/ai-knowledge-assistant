@@ -90,14 +90,21 @@ class DocumentProcessingService:
             )
 
             # Update document name with extracted title if website title is available
-            if file_type == "website" and chunk_results and chunk_results[0].metadata.get("title"):
-                extracted_title = chunk_results[0].metadata["title"]
+            first_meta = (
+                chunk_results[0].metadata
+                if chunk_results and isinstance(chunk_results[0].metadata, dict)
+                else {}
+            )
+            if file_type == "website" and first_meta.get("title"):
+                extracted_title = first_meta["title"]
                 if extracted_title and extracted_title != "Webpage Content":
-                    doc.name = extracted_title[:255]
+                    doc.name = str(extracted_title)[:255]
 
             # Inject source URL and title into chunk metadata for downstream citations
             if doc.source_url:
                 for chunk in chunk_results:
+                    if not isinstance(chunk.metadata, dict):
+                        chunk.metadata = {}
                     chunk.metadata["url"] = doc.source_url
                     chunk.metadata["title"] = doc.name
                     chunk.metadata["source_type"] = "website"

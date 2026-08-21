@@ -50,7 +50,7 @@ class ContextBuilder:
 
         for idx, chunk in enumerate(valid_chunks, start=1):
             doc_name = chunk.original_filename or chunk.document_name
-            meta = chunk.metadata or {}
+            meta = chunk.metadata if isinstance(chunk.metadata, dict) else {}
             source_url = chunk.source_url or meta.get("url")
 
             # Determine location metadata

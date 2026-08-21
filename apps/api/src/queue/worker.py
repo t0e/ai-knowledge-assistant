@@ -19,13 +19,13 @@ logging.basicConfig(
 logger = logging.getLogger("ai_knowledge_assistant.worker")
 
 
-async def process_document_job(ctx: dict, document_id: str) -> dict:
+async def process_document_job(ctx: dict | None, document_id: str) -> dict:
     """
     Background worker job to extract, chunk, embed, and persist document knowledge.
     Safe against duplicate execution (Idempotent) and handles deleted documents cleanly.
     """
-    job_id = ctx.get("job_id", "unknown")
-    job_try = ctx.get("job_try", 1)
+    job_id = ctx.get("job_id", "unknown") if isinstance(ctx, dict) else "unknown"
+    job_try = ctx.get("job_try", 1) if isinstance(ctx, dict) else 1
     logger.info(
         f"Starting processing job (job_id={job_id}, document_id={document_id}, try={job_try}/{settings.JOB_MAX_RETRIES})"
     )
@@ -49,8 +49,14 @@ async def process_document_job(ctx: dict, document_id: str) -> dict:
         try:
             processed_doc = await processor.process_document(db, doc_uuid)
             logger.info(
-                f"Successfully processed document (job_id={job_id}, document_id={document_id}, status={processed_doc.status})"
+                f"Completed processing document (job_id={job_id}, document_id={document_id}, status={processed_doc.status})"
             )
+            if processed_doc.status == "failed":
+                return {
+                    "status": "failed",
+                    "document_id": document_id,
+                    "reason": processed_doc.error_message,
+                }
             return {"status": "ready", "document_id": document_id}
 
         except ValidationException as val_err:

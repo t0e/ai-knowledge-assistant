@@ -59,15 +59,15 @@ class HtmlTextExtractor(BaseTextExtractor):
         page_title = "Webpage Content"
         title_tag = soup.find("title")
         og_title = soup.find("meta", property="og:title")
-        if title_tag and title_tag.string:
-            page_title = title_tag.string.strip()
-        elif og_title and og_title.get("content"):
-            page_title = og_title["content"].strip()
+        if title_tag and title_tag.get_text():
+            page_title = title_tag.get_text().strip()
+        elif og_title and isinstance(og_title, Tag) and og_title.get("content"):
+            page_title = str(og_title.get("content")).strip()
         elif soup.find("h1"):
             page_title = soup.find("h1").get_text().strip()
 
         # Clean title string
-        page_title = re.sub(r"\s+", " ", page_title)
+        page_title = re.sub(r"\s+", " ", page_title).strip() or "Webpage Content"
 
         # 2. Remove HTML comments
         for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
@@ -82,8 +82,17 @@ class HtmlTextExtractor(BaseTextExtractor):
         for element in soup.find_all(True):
             if not isinstance(element, Tag):
                 continue
-            element_classes = " ".join(element.get("class", []))
-            element_id = element.get("id", "")
+            raw_class = element.get("class")
+            if isinstance(raw_class, list):
+                element_classes = " ".join(str(c) for c in raw_class if c)
+            elif raw_class:
+                element_classes = str(raw_class)
+            else:
+                element_classes = ""
+
+            raw_id = element.get("id")
+            element_id = str(raw_id) if raw_id else ""
+
             if NOISE_CLASSES_AND_IDS.search(element_classes) or NOISE_CLASSES_AND_IDS.search(
                 element_id
             ):
