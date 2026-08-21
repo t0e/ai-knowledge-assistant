@@ -1,0 +1,67 @@
+# ==============================================================================
+# Docker Build Ignore Configuration
+# ==============================================================================
+
+# Version Control
+.git
+.gitignore
+
+# Secrets and Environment Files
+.env
+.env.*
+.env.local
+!.env.example
+*.pem
+*.key
+*.cert
+*.cookie
+
+# Python & Backend Artifacts
+__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.pytest_cache
+**/.pytest_cache
+.ruff_cache
+**/.ruff_cache
+.mypy_cache
+**/.mypy_cache
+.coverage
+.coverage.*
+htmlcov/
+.venv
+venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# Node.js & Frontend Artifacts
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Persistent Storage & Database Data
+postgres_data/
+redis_data/
+storage_data/
+storage/
+**/storage/
+uploads/
+**/uploads/
+tmp/
+apps/api/evaluation/results/*.json
+
+# IDE & Operating System
+.DS_Store
+**/.DS_Store
+Thumbs.db
+.idea/
+.vscode/

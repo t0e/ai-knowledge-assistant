@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install system dependencies needed for compiling certain python packages
+# Install system dependencies needed for compilation and runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -33,4 +33,4 @@ USER appuser
 EXPOSE 8000
 
 ENTRYPOINT ["/app/apps/api/entrypoint.sh"]
-CMD ["uvicorn", "apps.api.src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "apps.api.src.main:app", "--host", "0.0.0.0", "--port", "8000"]

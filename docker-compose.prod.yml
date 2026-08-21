@@ -1,0 +1,143 @@
+# ==============================================================================
+# Production Docker Compose Configuration
+# Usage: docker compose -f docker-compose.prod.yml up -d --build
+# ==============================================================================
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ai_knowledge_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password is required in production}
+      POSTGRES_DB: ${POSTGRES_DB:-knowledge_db}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-knowledge_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ai_prod_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai_knowledge_redis_prod
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - ai_prod_network
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: ai_knowledge_backend_prod
+    restart: always
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME:-AI Knowledge Assistant}
+      - ENVIRONMENT=production
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required in production}
+      - API_V1_STR=${API_V1_STR:-/api/v1}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-knowledge_db}
+      - SYNC_DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-knowledge_db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - STORAGE_LOCAL_DIR=/app/storage
+      - MAX_UPLOAD_SIZE_MB=20
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-["https://yourdomain.com"]}
+      - COOKIE_SECURE=True
+      - COOKIE_SAMESITE=lax
+      - OPENAI_API_KEY=${OPENAI_API_KEY:?OPENAI_API_KEY is required in production}
+      - EMBEDDING_PROVIDER=openai
+      - LLM_PROVIDER=openai
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - RUN_MIGRATIONS=true
+    volumes:
+      - storage_data_prod:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health/liveness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - ai_prod_network
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: ai_knowledge_worker_prod
+    restart: always
+    command: python -m apps.api.src.queue.worker
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME:-AI Knowledge Assistant}
+      - ENVIRONMENT=production
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required in production}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-knowledge_db}
+      - SYNC_DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-knowledge_db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - STORAGE_LOCAL_DIR=/app/storage
+      - OPENAI_API_KEY=${OPENAI_API_KEY:?OPENAI_API_KEY is required in production}
+      - EMBEDDING_PROVIDER=openai
+      - LLM_PROVIDER=openai
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - PROCESSING_QUEUE=ai_knowledge_document_processing
+      - JOB_TIMEOUT=300
+      - JOB_MAX_RETRIES=3
+      - RUN_MIGRATIONS=false
+    volumes:
+      - storage_data_prod:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ai_prod_network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: runner
+    container_name: ai_knowledge_frontend_prod
+    restart: always
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.yourdomain.com}
+      - INTERNAL_API_URL=http://backend:8000
+      - PORT=3000
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - ai_prod_network
+
+networks:
+  ai_prod_network:
+    driver: bridge
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:
+  storage_data_prod:

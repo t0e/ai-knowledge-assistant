@@ -44,6 +44,7 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: ai_knowledge_backend
     restart: unless-stopped
+    command: uvicorn apps.api.src.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - PROJECT_NAME=${PROJECT_NAME:-AI Knowledge Assistant}
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -59,6 +60,7 @@ services:
       - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-openai}
       - LLM_PROVIDER=${LLM_PROVIDER:-openai}
       - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - RUN_MIGRATIONS=true
     ports:
       - "8000:8000"
     volumes:
@@ -100,6 +102,7 @@ services:
       - PROCESSING_QUEUE=ai_knowledge_document_processing
       - JOB_TIMEOUT=300
       - JOB_MAX_RETRIES=3
+      - RUN_MIGRATIONS=false
     volumes:
       - ./apps/api:/app/apps/api
       - storage_data:/app/storage
@@ -115,6 +118,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      target: runner
     container_name: ai_knowledge_frontend
     restart: unless-stopped
     environment:
@@ -123,10 +127,6 @@ services:
       - PORT=3000
     ports:
       - "3000:3000"
-    volumes:
-      - ./apps/web:/app
-      - /app/node_modules
-      - /app/.next
     depends_on:
       backend:
         condition: service_healthy
