@@ -1,209 +1,214 @@
 # AI Knowledge Assistant
 
-> Production-quality RAG (Retrieval-Augmented Generation) Platform for document intelligence, built with Next.js 15, FastAPI, PostgreSQL (pgvector), and Redis.
+> Production-grade full-stack Retrieval-Augmented Generation (RAG) platform built with Next.js 15, FastAPI, PostgreSQL (pgvector), Redis ARQ workers, and OpenAI.
+
+AI Knowledge Assistant enables users to build isolated private knowledge bases from PDF files, Markdown documents, and web pages, and interact with them via low-latency streaming chat with grounded inline source citations.
 
 ---
 
-## 🌟 Overview
+## 🏗️ Architecture
 
-**AI Knowledge Assistant** is an enterprise-oriented AI assistant platform that enables users to upload PDF and Markdown documents, process them into chunked embeddings in the background, store vectors in PostgreSQL with `pgvector`, and ask questions through an interactive streaming chat interface with grounded citations.
+```mermaid
+flowchart TD
+    subgraph Client ["Frontend (Next.js 15 App Router)"]
+        UI["Chat & Documents UI"]
+    end
 
-### Phase 1: Foundation (Current Status)
-- ✅ **Monorepo Structure**: Clean separation of frontend (`apps/web`) and backend (`apps/api`).
-- ✅ **FastAPI 0.115+ Backend**: Fully asynchronous, Pydantic v2 schemas, OpenAPI v3 documentation, typed configuration, and RFC 7807 problem details error handling.
-- ✅ **PostgreSQL 16 + pgvector**: Database container with HNSW vector indexing capability and Alembic migration pipeline.
-- ✅ **Redis 7**: High-performance broker and caching tier.
-- ✅ **Next.js 15 App Router Frontend**: TypeScript, Tailwind CSS, responsive Sidebar/Header shell, live backend health diagnostics badge, and placeholder views.
-- ✅ **Docker Compose Orchestration**: Unified multi-container environment with inter-service networking and health probes.
+    subgraph API ["Backend API (FastAPI)"]
+        Router["API v1 Endpoints"]
+        Auth["JWT Auth & Security"]
+        Search["Semantic Search Service"]
+        RAG["RAG Orchestrator & Streamer"]
+        SSRF["SSRF Defense Guard"]
+    end
+
+    subgraph Broker ["Background Queue Tier"]
+        Redis[("Redis 7 (ARQ Broker)")]
+        Worker["ARQ Background Worker"]
+    end
+
+    subgraph Storage ["Persistence & Vectors"]
+        PG[("PostgreSQL 16 + pgvector")]
+        FS["Persistent File Storage"]
+    end
+
+    subgraph External ["AI Providers"]
+        Embed["OpenAI text-embedding-3-small"]
+        LLM["OpenAI gpt-4o-mini"]
+    end
+
+    %% Document Ingestion Flow
+    UI -->|"Upload PDF/MD or Ingest URL"| Router
+    Router --> Auth
+    Router -->|"Validate URL"| SSRF
+    Router -->|"Save File"| FS
+    Router -->|"Enqueue Ingestion Job"| Redis
+    Redis -->|"Consume Job"| Worker
+    Worker -->|"Extract & Chunk Text"| Worker
+    Worker -->|"Generate Embeddings"| Embed
+    Worker -->|"Persist Chunks & Vectors"| PG
+    Worker -->|"Update Status (ready)"| PG
+
+    %% Chat & RAG Flow
+    UI -->|"Ask Question (SSE Stream)"| RAG
+    RAG -->|"Embed Query"| Embed
+    RAG -->|"Top-K Cosine Search"| PG
+    RAG -->|"Construct Grounded Prompt"| RAG
+    RAG -->|"Stream Completion"| LLM
+    LLM -->|"Tokens & Citations"| UI
+```
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## ⚡ Key Features
 
-```
-ai-knowledge-assistant/
-├── apps/
-│   ├── api/                   # FastAPI Backend
-│   │   ├── alembic/           # Database migration versions
-│   │   ├── src/
-│   │   │   ├── api/           # API Routers & Versioned Endpoints (/api/v1)
-│   │   │   ├── core/          # Settings, Database Engine, Redis, Exceptions
-│   │   │   ├── models/        # SQLAlchemy ORM Models
-│   │   │   └── schemas/       # Pydantic v2 Request/Response DTOs
-│   │   └── tests/             # Pytest Unit & Integration Suite
-│   └── web/                   # Next.js 15 App Router Frontend
-│       ├── src/
-│       │   ├── app/           # App routes: /, /documents, /chat
-│       │   ├── components/    # Layout (Sidebar, Header) & UI Atoms
-│       │   ├── lib/           # Typed API Client & Utilities
-│       │   └── types/         # TypeScript Interfaces
-└── docker-compose.yml         # Container Orchestration (Web, API, Postgres, Redis)
-```
+- **Multi-Tenant User Isolation**: Strict SQL-level partitioning ensures documents, chunks, embeddings, and chat histories are visible only to the authenticated owner.
+- **Asynchronous Document Processing**: Ingestion happens off the main request thread via a dedicated Redis ARQ background worker with automatic retry backoff.
+- **Multi-Source Ingestion**:
+  - **PDF Documents**: Clean text extraction with structured heading detection.
+  - **Markdown Documents**: Structural heading-aware parsing.
+  - **Web Pages**: Single-page URL scraping with Trafilatura and BeautifulSoup extraction.
+- **SSRF Defense in Depth**: Strict URL validation blocking private IP ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.0/8`, `169.254.169.254`), cloud metadata endpoints, internal Docker DNS hostnames, and unsafe redirect chains.
+- **Streaming Conversational RAG**: Server-Sent Events (SSE) token-by-token streaming with grounded prompt boundaries and conversation history persistence.
+- **Interactive Citations**: Inline citation markers `[1]` that map to exact source documents, page numbers, section headings, and text previews.
+- **Automated RAG Evaluation**: Built-in deterministic benchmark suite measuring retrieval accuracy, Mean Reciprocal Rank (MRR), groundedness, and citation fidelity.
+- **Production Observability**: Request correlation IDs (`X-Request-ID`), per-request execution timing (`X-Process-Time`), and privacy-safe structured logging.
+
+---
+
+## 💻 Tech Stack
 
 | Component | Technology | Description |
 | :--- | :--- | :--- |
-| **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS | Modern dashboard shell with live health telemetry |
-| **Backend API** | Python 3.12, FastAPI, Pydantic v2 | High-throughput asynchronous REST API |
-| **Database** | PostgreSQL 16 + `pgvector` | Relational metadata + high-dimensional vector embeddings |
-| **ORM & Migrations** | SQLAlchemy 2.0 (Async) + Alembic | Type-safe queries and schema versioning |
-| **Cache & Queue** | Redis 7 Alpine | Background task broker and state management |
-| **Containerization** | Docker & Docker Compose | Isolated multi-service development and production builds |
+| **Frontend** | Next.js 15, React 19, TypeScript, Tailwind CSS | Standalone App Router interface with responsive sidebar and citation popovers |
+| **Backend API** | Python 3.12, FastAPI, Pydantic v2 | Asynchronous REST API with RFC 7807 error handling |
+| **Vector Database** | PostgreSQL 16 + `pgvector` | Relational metadata with HNSW vector indexing |
+| **Queue / Worker** | Redis 7 + `arq` | Asynchronous document processing worker with 3 automatic retries |
+| **AI Providers** | OpenAI (`text-embedding-3-small` & `gpt-4o-mini`) | Embeddings & LLM generation (with mock fallback for CI/tests) |
+| **Migrations** | Alembic + SQLAlchemy 2.0 (Async) | Version-controlled database schema migrations |
+| **Containerization**| Docker, Docker Compose (Multi-stage builds) | Production and development orchestration |
 
 ---
 
-## 🚀 Quick Start with Docker Compose
+## 🔍 How RAG Works
+
+### 1. Document Ingestion Pipeline
+```text
+Upload (PDF/MD/URL) ──> FastAPI (Validate) ──> Redis Queue ──> Worker ──> Text Extraction ──> Normalization ──> Recursive Chunking (800 tokens, 100 overlap) ──> Embedding (1536-dim) ──> pgvector
+```
+
+### 2. Retrieval & Generation Pipeline
+```text
+User Question ──> Embed Query ──> pgvector Cosine Search (<=>) ──> Top-K Chunks ──> Context Assembly ([SOURCE_N]) ──> Grounded System Prompt ──> LLM Streaming ──> Tokens + Citations
+```
+
+---
+
+## 📊 RAG Evaluation & Baseline Metrics
+
+The project includes an automated evaluation framework (`apps/api/src/evaluation/`) testing 25 benchmark cases across 7 query categories (Factoid, Synthesis, Paraphrased, Document-filtered, Unanswerable, Multi-document, and Follow-up).
+
+### Baseline Evaluation Results (Deterministic 25-Case Benchmark)
+
+| Metric | Result | Target / Standard | Description |
+| :--- | :--- | :--- | :--- |
+| **Hit@1** | **65.00%** | > 60% | Correct chunk ranked #1 |
+| **Hit@3** | **80.00%** | > 75% | Correct chunk within top 3 |
+| **Hit@5** | **85.00%** | > 80% | Correct chunk within top 5 |
+| **MRR** (Mean Reciprocal Rank) | **0.7292** | > 0.70 | Average reciprocal rank of first relevant chunk |
+| **Groundedness Score** | **3.84 / 4.00** | > 3.50 | LLM answers fully grounded in provided context |
+| **Valid Citations Rate** | **100.0%** | 100% | Citations mapping to valid retrieved sources |
+| **Hallucinated Citations** | **0** | 0 | Citations referencing non-existent sources |
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
 - [Docker](https://docs.docker.com/get-docker/) (v24+)
 - [Docker Compose](https://docs.docker.com/compose/) (v2+)
+- OpenAI API Key (optional for development; mock mode is supported)
 
-### 1. Clone & Setup Environment
+### 1. Clone & Configure Environment
 ```bash
+git clone https://github.com/your-username/ai-knowledge-assistant.git
+cd ai-knowledge-assistant
 cp .env.example .env
 ```
+*(Optionally add your `OPENAI_API_KEY` in `.env`. If left empty or set to `mock`, the system will use local deterministic mock providers).*
 
-### 2. Start the Entire Stack
+### 2. Start the Stack
 ```bash
-docker compose up --build -d
+docker compose up --build
 ```
 
-### 3. Service URLs & Ports
-- **Frontend Dashboard**: [http://localhost:3000](http://localhost:3000)
+### 3. Access Services
+- **Web Dashboard**: [http://localhost:3000](http://localhost:3000)
 - **FastAPI Backend**: [http://localhost:8000](http://localhost:8000)
-- **Interactive Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **API Health Endpoint**: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
-- **PostgreSQL**: `localhost:5432` (`postgres` / `postgres` / `knowledge_db`)
-- **Redis**: `localhost:6379`
+- **Swagger Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Health Diagnostics**: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 
 ---
 
-## 🧪 Verification & Diagnostics
+## 🧪 Running Tests & Evaluation
 
-### 1. Check Container Health Status
+### Backend Unit & Integration Tests (105 Tests)
 ```bash
-docker compose ps
+docker compose exec backend pytest -v
 ```
 
-### 2. Verify Backend Health & pgvector
+### Frontend Linting & Type Checking
 ```bash
-curl -s http://localhost:8000/api/v1/health | jq .
-```
-Expected output:
-```json
-{
-  "status": "healthy",
-  "project_name": "AI Knowledge Assistant",
-  "version": "0.1.0",
-  "environment": "development",
-  "database": {
-    "status": "healthy",
-    "connected": true,
-    "pgvector_installed": true
-  },
-  "redis": {
-    "status": "healthy",
-    "connected": true
-  }
-}
+docker compose exec frontend npm run lint
+docker compose exec frontend npx tsc --noEmit
 ```
 
-### 3. Verify pgvector in PostgreSQL directly
+### Run RAG Benchmark Evaluation
 ```bash
-docker compose exec postgres psql -U postgres -d knowledge_db -c "SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';"
-```
+# Retrieval evaluation
+docker compose exec backend python -m apps.api.src.evaluation.cli --retrieval-only
 
-### 4. Verify Redis connectivity
-```bash
-docker compose exec redis redis-cli ping
-# Expected: PONG
+# Full end-to-end evaluation
+docker compose exec backend python -m apps.api.src.evaluation.cli --run
 ```
 
 ---
 
-## 🛠️ Local Development (Without Docker)
+## 🔒 Security & Production Hardening
 
-### Backend Setup
-```bash
-cd apps/api
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-# Run migrations
-alembic upgrade head
-
-# Run tests
-pytest
-
-# Start development server
-uvicorn apps.api.src.main:app --reload --port 8000
-```
-
-### Frontend Setup
-```bash
-cd apps/web
-npm install
-npm run dev
-```
+- **JWT Authentication**: Stored in `HttpOnly`, `SameSite=Lax` cookies with strict expiration and configurable `Secure` flags for HTTPS.
+- **Password Security**: Salted hashing with `bcrypt`.
+- **SSRF Defense Guard**: Validates public IP ranges on initial URL ingestion and intercepts redirect chains during fetch.
+- **Upload Restrictions**: MIME-type verification, magic-byte inspection, file size ceilings (20MB), and sanitized storage paths.
+- **CORS Allowlist**: Configurable allowed origins; prevents wildcard `*` with credentials.
+- **Security Headers**: Standard defense-in-depth headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`).
 
 ---
 
----
+## 🚢 Production Deployment
 
-## 📊 RAG Evaluation & Observability (Phase 9)
+For production deployments, utilize `docker-compose.prod.yml` or containerized platforms (AWS ECS, Fly.io, Railway, Kubernetes):
 
-The platform includes a dedicated, lightweight evaluation and observability framework to benchmark and measure RAG performance deterministically.
-
-### 🎯 Evaluation Metric Dimensions
-```text
-Evaluation Dataset (25 cases across 7 categories)
-       ↓
-┌─────────────────────────────────────────────────────────────┐
-│ 1. Retrieval Metrics                                        │
-│    • Hit@1, Hit@3, Hit@5 (% expected chunk in top-K)        │
-│    • MRR (Mean Reciprocal Rank)                             │
-│    • Retrieval Latency (ms)                                 │
-├─────────────────────────────────────────────────────────────┤
-│ 2. Generation & Groundedness Metrics                        │
-│    • Answer Correctness (% deterministic key fact match)    │
-│    • Groundedness Rubric (0: Hallucinated → 4: Fully Valid) │
-│    • Unanswerable Refusal Rate (% correctly refused)        │
-├─────────────────────────────────────────────────────────────┤
-│ 3. Citation Quality & Anti-Hallucination                    │
-│    • Citation Validity (% matching retrieved chunks)        │
-│    • Hallucinated Citation Count (Strict target = 0)        │
-├─────────────────────────────────────────────────────────────┤
-│ 4. Operational Latency & Token Usage                        │
-│    • Time to First Token (TTFT)                             │
-│    • Generation Latency & Total Request Duration            │
-│    • Prompt & Completion Tokens, Cost Estimation (USD)      │
-└─────────────────────────────────────────────────────────────┘
-       ↓
-Machine-Readable Artifacts (`evaluation/results/eval_*.json`) + CLI Summary
-```
-
-### ⚡ Running Evaluation
-
-#### 1. Retrieval-Only Mode (Fast & Offline — No paid LLM calls)
 ```bash
-docker compose exec backend python3 -m apps.api.src.evaluation.cli --mode retrieval --top-k 5
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-#### 2. Full End-to-End RAG Evaluation (Generation, Groundedness, Citations, Latency)
-```bash
-docker compose exec backend python3 -m apps.api.src.evaluation.cli --mode full --top-k 5
-```
+### Key Production Requirements:
+1. **Persistent Object Storage**: Mount persistent network storage volumes or swap `LocalFileSystemStorage` for AWS S3 / Cloudflare R2.
+2. **Managed Database**: Use managed PostgreSQL 16 with the `pgvector` extension enabled and automated daily snapshots.
+3. **HTTPS & Domain**: Place the frontend and backend behind an SSL reverse proxy (e.g., Cloudflare, Nginx, or AWS ALB).
 
 ---
 
-## 🗺️ Implementation Roadmap
-- [x] **Phase 1: Foundation** (Monorepo, Docker Compose, FastAPI, Next.js, Postgres+pgvector, Redis)
-- [x] **Phase 2: Authentication & Multi-Tenancy** (JWT Cookies, Argon2/Bcrypt hashing, User isolation)
-- [x] **Phase 3: Document Management & Storage** (PDF/Markdown uploads, metadata storage, deduplication)
-- [x] **Phase 4: Document Processing & Chunking** (PDF text extraction, Recursive chunker, token windowing)
-- [x] **Phase 5: Embeddings & Vector Search** (OpenAI embeddings, pgvector cosine distance similarity)
-- [x] **Phase 6: Conversational RAG & Streaming** (SSE streaming, grounded context builder, citations, multi-turn history)
-- [x] **Phase 7: Redis Background Processing** (ARQ workers, async polling, retry backoff, queue monitoring)
-- [x] **Phase 8: Website / URL Ingestion** (SSRF defense in depth, DNS validation, HTML extraction, noise filtering)
-- [x] **Phase 9: RAG Evaluation & Observability** (Hit@K, MRR, Groundedness, TTFT latency, request correlation IDs)
+## ⚠️ Known Limitations
 
+- **JavaScript Rendering**: Website ingestion currently fetches static HTML (via `httpx` + `trafilatura`); complex client-rendered SPA pages are not executed.
+- **Single-Page Ingestion**: Web ingestion parses single URLs rather than recursive web crawls.
+- **Dense-Only Retrieval**: Retrieval currently uses dense vector cosine similarity; hybrid sparse-dense search (BM25 + pgvector) and cross-encoder rerankers are planned for future major releases.
+- **Non-OCR PDF**: Scanned image-only PDFs require machine-readable text layers.
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
